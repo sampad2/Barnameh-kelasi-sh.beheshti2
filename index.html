@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>برنامه هفتگی مدرسه</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Tahoma, sans-serif;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    min-height: 100vh;
+    padding: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  .box {
+    background: #fff;
+    max-width: 900px;
+    width: 100%;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+    margin-top: 20px;
+  }
+  h1 { text-align: center; color: #4a3f8f; font-size: 22px; margin-bottom: 5px; }
+  .sub { text-align: center; color: #999; font-size: 13px; margin-bottom: 20px; }
+
+  label { display: block; margin: 15px 0 6px; color: #4a3f8f; font-weight: bold; font-size: 14px; }
+  select, button {
+    width: 100%;
+    padding: 12px;
+    font-family: Tahoma, sans-serif;
+    font-size: 15px;
+    border-radius: 10px;
+    border: 2px solid #ddd;
+  }
+  select:focus { outline: none; border-color: #667eea; }
+  button {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    border: none;
+    margin-top: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102,126,234,0.4); }
+  button:disabled { background: #ccc; cursor: not-allowed; }
+
+  #schedulePage { display: none; }
+  #schedulePage.active { display: block; }
+
+  .back {
+    background: #f0f0ff;
+    color: #4a3f8f;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-family: Tahoma;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 13px;
+    margin-bottom: 15px;
+  }
+  .header-info {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    padding: 12px;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 15px;
+    font-size: 15px;
+  }
+
+  table { width: 100%; border-collapse: collapse; border-radius: 10px; overflow: hidden; font-size: 14px; }
+  th {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    padding: 12px 6px;
+    font-size: 14px;
+  }
+  td {
+    padding: 12px 6px;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+    color: #333;
+  }
+  tr:nth-child(even) td { background: #f9f9ff; }
+  tr:hover td { background: #eef0ff; }
+  td:first-child { font-weight: bold; color: #4a3f8f; background: #f0f0ff !important; }
+
+  @media (max-width: 600px) {
+    .box { padding: 15px; }
+    h1 { font-size: 18px; }
+    th, td { padding: 8px 4px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+  <div class="box">
+
+    <!-- صفحه انتخاب -->
+    <div id="selectPage">
+      <h1>📚 برنامه هفتگی مدرسه</h1>
+      <p class="sub">پایه و کلاس خود را انتخاب کنید</p>
+
+      <label>پایه تحصیلی:</label>
+      <select id="grade">
+        <option value="">-- انتخاب کنید --</option>
+      </select>
+
+      <label>کلاس / رشته:</label>
+      <select id="cls" disabled>
+        <option value="">-- ابتدا پایه را انتخاب کنید --</option>
+      </select>
+
+      <button id="btn" disabled>نمایش برنامه هفتگی</button>
+    </div>
+
+    <!-- صفحه برنامه -->
+    <div id="schedulePage">
+      <button class="back" onclick="goBack()">← بازگشت</button>
+      <div class="header-info" id="headerInfo"></div>
+      <div id="tableArea"></div>
+    </div>
+
+  </div>
+
+<script>
+/* ==========================================================
+   📊 داده‌های برنامه هفتگی — ۴ زنگ در روز
+   ساختار: هر کلاس → ۵ روز → ۴ درس
+   ========================================================== */
+const days = ["شنبه", "یک‌شنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه"];
+
+const schedule = {
+
+  "دهم": {
+    "تجربی ۱": {
+      "شنبه":     ["ریاضی", "فیزیک", "زیست شناسی", "انگلیسی"],
+      "یک‌شنبه":  ["ریاضی", "زیست شناسی", "دین و زندگی", "فارسی"],
+      "دوشنبه":   ["شیمی", "ریاضی", "انگلیسی", "فیزیک"],
+      "سه‌شنبه":  ["جغرافیا", "نگارش", "عربی", "تفکر"],
+      "چهارشنبه": ["شیمی", "آزمایشگاه", "ورزش", "دفاعی"]
+    },
+    "تجربی ۲": {
+      "شنبه":     ["فیزیک", "ریاضی", "انگلیسی", "زیست شناسی"],
+      "یک‌شنبه":  ["ریاضی", "ریاضی", "فارسی", "دین و زندگی"],
+      "دوشنبه":   ["تفکر", "شیمی", "فیزیک", "آزمایشگاه"],
+      "سه‌شنبه":  ["عربی", "ورزش", "انگلیسی", "نگارش"],
+      "چهارشنبه": ["جغرافیا", "شیمی", "دفاعی", "زیست شناسی"]
+    },
+    "ریاضی فیزیک": {
+      "شنبه":     ["ریاضی", "دین و زندگی", "شیمی", "انگلیسی/"],
+      "یک‌شنبه":  ["فیزیک", "فارسی", "ورزش", "آزمایشگاه"],
+      "دوشنبه":   ["ریاضی", "انگلیسی", "هندسه", "تفکر"],
+      "سه‌شنبه":  ["فیزیک", "فیزیک", "نگارش", "عربی"],
+      "چهارشنبه": ["دفاعی", "شیمی", "جغرافیا", "ریاضی"]
+    },
+    "انسانی": {
+      "شنبه":     ["ریاضی", "جامعه شناسی", "تفکر", "           "],
+      "یک‌شنبه":  ["تاریخ/دینی", "دین و زندگی", "عربی", "تاریخ"],
+      "دوشنبه":   ["علوم و فنون ادبی", "اقتصاد", "فارسی", "انگلیسی"],
+      "سه‌شنبه":  ["انگلیسی", "نگارش", "ریاضی", "منطق"],
+      "چهارشنبه": ["ورزش", "دفاعی", "عربی", "جغرافیا"]
+    }
+  },
+
+  "یازدهم": {
+    "تجربی ۱": {
+      "شنبه":     ["زیست شناسی", "زمین شناسی", "فیزیک", "انسان و محیط زیست"],
+      "یک‌شنبه":  ["عربی", "انگلیسی", "دین و زندگی", "ورزش"],
+      "دوشنبه":   ["زیست شناسی", "ریاضی", "فیزیک", "شیمی"],
+      "سه‌شنبه":  ["انگلیسی", "ریاضی", "فارسی", "نگارش/آزمایشگاه"],
+      "چهارشنبه": ["کارآفرینی", "تاریخ", "شیمی", "        "]
+    },
+    "تجربی ۲": {
+      "شنبه":     ["انسان و محیط زیست", "زیست شناسی", "زمین شناسی", "فیزیک"],
+      "یک‌شنبه":  ["ورزش", "فیزیک", "انگلیسی", "عربی"],
+      "دوشنبه":   ["ریاضی", "زیست شناسی", "شیمی", "دین و زندگی"],
+      "سه‌شنبه":  ["فارسی", "انگلیسی", "ریاضی", "آ         "],
+      "چهارشنبه": ["شیمی", "کارآفرینی", "تاریخ", "نگارش/آزمایشگاه"]
+    },
+    "ریاضی فیزیک": {
+      "شنبه":     ["دین و زندگی", "حسابان", "فیزیک", "شیمی"],
+      "یک‌شنبه":  ["انسان و محیط زیست", "ورزش", "فیزیک", "انگلیسی"],
+      "دوشنبه":   ["نگارش/", "فارسی", "حسابان", "آمارواحتمال"],
+      "سه‌شنبه":  ["زمین شناسی", "عربی", "انگلیسی", "آزمایشگاه/"],
+      "چهارشنبه": ["شیمی", "هندسه", "کارآفرینی", "تاریخ"]
+    },
+    "انسانی": {
+      "شنبه":     ["ریاضی", "فارسی", "کارآفرینی", "جامعه شناسی/نگارش"],
+      "یک‌شنبه":  ["تاریخ/جغرافیا", "عربی", "تاریخ", "دین و زندگی"],
+      "دوشنبه":   ["انگلیسی", "علوم و فنون ادبی", "جامعه شناسی", "انگلیسی"],
+      "سه‌شنبه":  ["ورزش", "جغرافیا", "فلسفه", "دین و زندگی"],
+      "چهارشنبه": ["عربی", "انسان و محیط زیست", "روانشناسی", "        "]
+    }
+  },
+
+  "دوازدهم": {
+    "تجربی ۱": {
+      "شنبه":     ["فیزیک", "شیمی", "دین و زندگی", "ریاضی"],
+      "یک‌شنبه":  ["زیست شناسی", "انگلیسی", "عربی", "فیزیک"],
+      "دوشنبه":   ["فارسی", "شیمی", "ریاضی", "نگارش"],
+      "سه‌شنبه":  ["مدیریت خانواده", "انگلیسی", "سلامت و بهداشت", "زیست شناسی"],
+      "چهارشنبه": ["هویت اجتماعی", "ورزش", "        ", "          "]
+    },
+    "تجربی ۲": {
+      "شنبه":     ["شیمی", "فیزیک", "ریاضی", "دین و زندگی"],
+      "یک‌شنبه":  ["عربی", "فیزیک", "زیست شناسی", "انگلیسی"],
+      "دوشنبه":   ["شیمی", "فارسی", "مدیریت خانواده", "ریاضی"],
+      "سه‌شنبه":  ["انگلیسی", "نگارش", "زیست شناسی", "سلامت و بهداشت"],
+      "چهارشنبه": ["ورزش", "هویت اجتماعی", "       ", "         "]
+    },
+    "ریاضی فیزیک": {
+      "شنبه":     ["حسابان", "فیزیک", "هندسه", "ریاضیات گسسته"],
+      "یک‌شنبه":  ["سلامت و بهداشت", "عربی", "انگلیسی", "فیزیک"],
+      "دوشنبه":   ["انگلیسی", "شیمی", "نگارش", "فارسی"],
+      "سه‌شنبه":  ["حسابان", "مدیریت خانواده", "ورزش", "دین و زندگی"],
+      "چهارشنبه": ["هندسه", "شیمی", "هویت اجتماعی", "           "]
+    },
+    "انسانی": {
+      "شنبه":     ["جامعه شناسی", "ریاضی", "فارسی", "دین و زندگی"],
+      "یک‌شنبه":  ["دین و زندگی", "تاریخ", "انگلیسی", "عربی"],
+      "دوشنبه":   ["       ", "مدیریت خانواده", "علوم و فنون ادبی", "مطالعات اجتماعی"],
+      "سه‌شنبه":  ["نگارش", "فلسفه", "انگلیسی", "ورزش"],
+      "چهارشنبه": ["جغرافیا", "عربی", "سلامت و بهداشت", "جامعه شناسی/"]
+    }
+  }
+};
+
+/* ==========================================================
+   🚀 منطق برنامه
+   ========================================================== */
+const gradeEl = document.getElementById("grade");
+const clsEl = document.getElementById("cls");
+const btn = document.getElementById("btn");
+
+Object.keys(schedule).forEach(function(g) {
+  const opt = document.createElement("option");
+  opt.value = g;
+  opt.textContent = g;
+  gradeEl.appendChild(opt);
+});
+
+gradeEl.onchange = function() {
+  clsEl.innerHTML = '<option value="">-- انتخاب کنید --</option>';
+  btn.disabled = true;
+  if (!gradeEl.value) {
+    clsEl.disabled = true;
+    clsEl.innerHTML = '<option value="">-- ابتدا پایه را انتخاب کنید --</option>';
+    return;
+  }
+  Object.keys(schedule[gradeEl.value]).forEach(function(c) {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
+    clsEl.appendChild(opt);
+  });
+  clsEl.disabled = false;
+};
+
+clsEl.onchange = function() {
+  btn.disabled = !clsEl.value;
+};
+
+btn.onclick = function() {
+  const g = gradeEl.value;
+  const c = clsEl.value;
+  const data = schedule[g][c];
+
+  document.getElementById("headerInfo").textContent =
+    "📅 پایه " + g + " — " + c;
+
+  let html = "<table><thead><tr><th>روز</th>";
+  for (let i = 1; i <= 4; i++) {
+    html += "<th>زنگ " + i + "</th>";
+  }
+  html += "</tr></thead><tbody>";
+
+  days.forEach(function(d) {
+    html += "<tr><td>" + d + "</td>";
+    for (let i = 0; i < 4; i++) {
+      const lesson = data[d] && data[d][i] ? data[d][i] : "-";
+      html += "<td>" + lesson + "</td>";
+    }
+    html += "</tr>";
+  });
+  html += "</tbody></table>";
+
+  document.getElementById("tableArea").innerHTML = html;
+  document.getElementById("selectPage").style.display = "none";
+  document.getElementById("schedulePage").classList.add("active");
+};
+
+function goBack() {
+  document.getElementById("selectPage").style.display = "block";
+  document.getElementById("schedulePage").classList.remove("active");
+}
+</script>
+</body>
+</html>
